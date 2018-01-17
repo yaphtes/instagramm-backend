@@ -1,11 +1,17 @@
-import mongoose  from 'mongoose';
+const mongoose = require('mongoose');
 
 
 const userSchema = mongoose.Schema({
-  name: {
+  username: {
     type: String,
     unique: true,
-    required: true
+    required: true,
+    dropDups: true
+  },
+
+  hash: {
+    type: String,
+    unique: true
   }
 });
 
