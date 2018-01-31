@@ -1,7 +1,6 @@
 const config = require('./config');
 const express = require('express');
 const bodyParser = require('body-parser');
-const formidable = require('formidable');
 const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
@@ -16,7 +15,6 @@ app.use(bodyParser.raw({
   limit: 52428800,
   type: 'application/octet-stream'
 }));
-app.use(express.static(__dirname + '/uploads' + '/avatars'));
 
 mongoose.connect(config.mongoose.uri);
 const db = mongoose.connection;
@@ -27,4 +25,4 @@ db.once('open', () => {
   app.listen(8000, () => console.log('express started'));
 });
 
-module.exports = { app };
+module.exports = { app, db };

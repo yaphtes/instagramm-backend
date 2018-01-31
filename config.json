@@ -1,5 +1,9 @@
 {
   "mongoose": {
-    "uri": "mongodb://localhost:27017/instagram"
+    "uri": "mongodb://localhost:27017/thoughts"
+  },
+
+  "jwt": {
+    "expiresIn": "7d"
   }
 }
