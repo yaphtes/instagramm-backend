@@ -1,24 +1,18 @@
-const salt = 'secret';
 const fs = require('fs');
 const path = require('path');
 const stream = require('stream');
 const jwt = require('jsonwebtoken');
 const { app, db } = require('../app');
 const { User } = require('../models');
+const fileType = require('file-type');
 const config = require('../config.json');
-const { IncomingForm } = require('formidable');
-const createGridFS = require('mongoose-gridfs');
-const pathToAvatars = path.resolve(__dirname, '../', 'uploads', 'avatars');
+const uploads = path.join(__dirname, '..', 'uploads');
 
-const avatarGridfs = createGridFS({
-  colleciton: 'avatars',
-  model: 'Avatar',
-  mongooseConneciton: db
-});
 
-const AvatarModel = avatarGridfs.model;
+// переписать mongoose в промисы, работать через ObjectID (?)
 
 module.exports = {
+  // TODO:
   postArticle(req, res) {
     const form = new IncomingForm();
     form.multiples = true;
@@ -31,31 +25,49 @@ module.exports = {
   },
 
   deleteAvatar(req, res) {
-    const { id, oldAvatar } = req.body;
+    const { id, currentAvatar } = req.body;
 
-    if (oldAvatar) {
-      fs.unlink(path.join(pathToAvatars, oldAvatar), err => {
+    if (currentAvatar) {
+      fs.unlink(path.join(uploads, id, currentAvatar), err => {
         if (err) throw err;
-        const update = { avatar: '' };
-        User.findByIdAndUpdate({ _id: id }, update, (err, doc) => {
+        const options = { new: true };
+        const update = { avatar: "" };
+  
+        User.findByIdAndUpdate(id, update, options, (err, doc) => {
           if (err) throw err;
           res.status(200).send();
         });
       });
     } else {
-      res.status(204).send();
+      res.status(200).send();      
     }
   },
 
-  // TODO: реализовать
   putAvatar(req, res) {
-    const form = new IncomingForm();
+    const { id, currentAvatar } = req.body;
+    const { file: avatar } = req;
+    const signature = String(Math.random()).slice(3, 8).split('').reverse().join('');
+    
+    if (currentAvatar) {
+      fs.unlink(path.join(uploads, id, currentAvatar), err => {
+        if (err) throw err;
+        write();
+      });
+    } else {
+      write();
+    }
 
-    form.parse(req, (err, fields, files) => {
-      if (err) throw err;
-      const { id, oldAvatar } = fields;
-      const { avatar } = files;
-    });
+    function write() {
+      const name = `avatar-${signature}`;
+      fs.writeFile(path.join(uploads, id, name), avatar.buffer, err => {
+        if (err) throw err;
+        const update = { avatar: name };
+        User.findByIdAndUpdate(id, update, (err, doc) => {
+          if (err) throw err;
+          res.status(200).send({ avatar: name });
+        });
+      });
+    }
   },
 
   putUser(req, res) {
@@ -83,6 +95,7 @@ module.exports = {
       if (doc) return res.status(422).send('User already exists');
       let user = new User({ username });
       let id = String(user._id);
+      fs.mkdir(path.join(uploads, id));
       user.hash = jwt.sign({ password }, id, { expiresIn: config.jwt.expiresIn });
       user.save((err, user) => {
         if (err) throw err;
@@ -124,9 +137,10 @@ module.exports = {
   },
 
   jwtCheck(req, res, next) {
-    const { path, method } = req;
-    
-    if (path === '/api/user' && method === 'GET' || method === 'POST') {
+    const { method, originalUrl } = req;
+
+    // if login or registation
+    if (originalUrl.includes('/api/user') && method === 'GET' || method === 'POST') {
       next();
     } else {
       const hash = req.headers['x-jwt'];
