@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
+const { ObjectId } = mongoose.Schema.Types;
 
-// Посмотреть в сторону Virtual полей
-const userSchema = mongoose.Schema({
+const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true
@@ -18,13 +18,7 @@ const userSchema = mongoose.Schema({
   avatar: String,
   gender: String,
 
-  posts: [{
-    date: Date,
-    title: String,
-    content: String,
-    preview: String,
-    photoCollection: [String]
-  }]
+  posts: [ObjectId]
 });
 
 module.exports = mongoose.model('User', userSchema);

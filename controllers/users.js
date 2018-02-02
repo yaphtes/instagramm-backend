@@ -6,24 +6,12 @@ const { app, db } = require('../app');
 const { User } = require('../models');
 const fileType = require('file-type');
 const config = require('../config.json');
-const uploads = path.join(__dirname, '..', 'uploads');
+const { uploads, makeSignature } = require('../variables');
 
 
 // переписать mongoose в промисы, работать через ObjectID (?)
 
 module.exports = {
-  // TODO:
-  postArticle(req, res) {
-    const form = new IncomingForm();
-    form.multiples = true;
-
-    form.parse(req, (err, fields, files) => {
-      if (err) throw err;
-      console.log("preview", files.preveiw);
-      console.log("collection", files.collection);
-    });
-  },
-
   deleteAvatar(req, res) {
     const { id, currentAvatar } = req.body;
 
@@ -46,7 +34,7 @@ module.exports = {
   putAvatar(req, res) {
     const { id, currentAvatar } = req.body;
     const { file: avatar } = req;
-    const signature = String(Math.random()).slice(3, 8).split('').reverse().join('');
+    const signature = makeSignature();;
     
     if (currentAvatar) {
       fs.unlink(path.join(uploads, id, currentAvatar), err => {
@@ -144,6 +132,7 @@ module.exports = {
       next();
     } else {
       const hash = req.headers['x-jwt'];
+      console.log(req.headers);
       User.findOne({ hash }, (err, doc) => {
         if (err) throw err;
         const id = String(doc._id);
