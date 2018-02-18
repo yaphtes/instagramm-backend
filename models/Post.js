@@ -9,7 +9,7 @@ const postSchema = new mongoose.Schema({
   date: Date,
   title: String,
   content: String,
-  preveiw: String,
+  preview: String,
   photoCollection: [String]
 });
 

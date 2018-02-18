@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "nodemon app"
+    "start": "nodemon app",
+    "debug": "node --inspect app"
   },
   "devDependencies": {
     "nodemon": "^1.14.10"

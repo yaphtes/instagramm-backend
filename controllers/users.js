@@ -7,52 +7,66 @@ const { User } = require('../models');
 const fileType = require('file-type');
 const config = require('../config.json');
 const { uploads, makeSignature } = require('../variables');
+const { promisify } = require('util');
+const unlink = promisify(fs.unlink);
+const mkdir = promisify(fs.mkdir);
+const writeFile = promisify(fs.writeFile);
 
 
 // переписать mongoose в промисы, работать через ObjectID (?)
 
 module.exports = {
-  deleteAvatar(req, res) {
+  async deleteAvatar(req, res) {
     const { id, currentAvatar } = req.body;
 
     if (currentAvatar) {
-      fs.unlink(path.join(uploads, id, currentAvatar), err => {
-        if (err) throw err;
+      try {
+        await unlink(path.join(uploads, id, currentAvatar));
         const options = { new: true };
         const update = { avatar: "" };
-  
+
         User.findByIdAndUpdate(id, update, options, (err, doc) => {
           if (err) throw err;
           res.status(200).send();
         });
-      });
+      } catch(err) {
+        console.log(err);
+      }
     } else {
-      res.status(200).send();      
+      res.status(200).send();
     }
   },
 
-  putAvatar(req, res) {
+  async putAvatar(req, res) {
     const { id, currentAvatar } = req.body;
     const { file: avatar } = req;
     const signature = makeSignature();;
     
-    if (currentAvatar) {
-      fs.unlink(path.join(uploads, id, currentAvatar), err => {
-        if (err) throw err;
-        write();
-      });
-    } else {
-      write();
+    
+    try {
+      if (currentAvatar) {
+        await unlink(path.join(uploads, id, currentAvatar));
+        const avatar = await write();
+        res.status(200).send({ avatar });
+      } else {
+        const avatar = await write();
+        res.status(200).send({ avatar });
+      }
+    } catch(err) {
+      console.log(err);
     }
 
     function write() {
-      const name = `avatar-${signature}`;
-      fs.writeFile(path.join(uploads, id, name), avatar.buffer, err => {
-        if (err) throw err;
+      return new Promise(async (resolve, reject) => {
+        const name = `avatar-${signature}`;
+        await writeFile(path.join(uploads, id, name), avatar.buffer);
         const update = { avatar: name };
         User.findByIdAndUpdate(id, update, (err, doc) => {
-          if (err) throw err;
-          res.status(200).send({ avatar: name });
+          if (err) {
+            reject(err)
+          } else {
+            resolve(name);
+          }
         });
       });
     }
@@ -78,12 +92,13 @@ module.exports = {
 
   postUser(req, res) {
     const { username, password } = req.body;
-    User.findOne({ username }, (err, doc) => {
+    User.findOne({ username }, async (err, doc) => {
       if (err) throw err;
       if (doc) return res.status(422).send('User already exists');
       let user = new User({ username });
       let id = String(user._id);
-      fs.mkdir(path.join(uploads, id));
+      await mkdir(path.join(uploads, id));
+      await mkdir(path.join(uploads, id, 'posts'));
       user.hash = jwt.sign({ password }, id, { expiresIn: config.jwt.expiresIn });
       user.save((err, user) => {
         if (err) throw err;

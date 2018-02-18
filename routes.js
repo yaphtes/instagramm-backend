@@ -15,3 +15,4 @@ app.get('/api/user-by-token', users.getUserByToken);
 
 // posts
 app.post('/api/article', upload.fields([{ name: 'preview' }, { name: 'collection'}]), posts.postArticle);
+app.get('/api/post-preview', posts.getPostPreview);
