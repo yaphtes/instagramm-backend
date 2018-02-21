@@ -12,11 +12,15 @@ const writeFile = promisify(fs.writeFile);
 
 module.exports = {
   async postArticle(req, res) {
-    const preview = req.files.preview[0];
-    const { collection: photoCollection } = req.files;
+    const previewIsLoaded = Boolean(req.files.preview);
+    const collectionIsLoaded = Boolean(req.files.collection);
+
+    if (previewIsLoaded) var preview = req.files.preview[0];
+    if (collectionIsLoaded) var { collection: photoCollection } = req.files;
+
     let { id: userId, title, content, date } = req.body;
-    date = new Date(Number(date));
-        
+    console.log(userId);
+    date = new Date(Number(date));    
 
     let post = new Post({
       userId,
@@ -30,20 +34,24 @@ module.exports = {
     try {
       await mkdir(pathToPostDir);
       const signature = makeSignature();
-      const previewName = `preview-${signature}`;
-      await writeFile(path.join(pathToPostDir, previewName), preview.buffer);
-      post.preview = previewName;
+      if (previewIsLoaded) {
+        const previewName = `preview-${signature}`;
+        await writeFile(path.join(pathToPostDir, previewName), preview.buffer);
+        post.preview = previewName;
+      }
       await mkdir(path.join(pathToPostDir, 'collection'));
-      const collection = [];
-      let promises = [];
-      photoCollection.forEach((photo, i) => {
-        const photoName = `photo_${i}-${signature}`;
-        collection.push(photoName);
-        const pr = writeFile(path.join(pathToPostDir, 'collection', photoName), photo.buffer);
-        promises.push(pr);
-      });
-      await Promise.all(promises);
-      post.photoCollection = collection;
+      if (collectionIsLoaded) {
+        const collection = [];
+        let promises = [];
+        photoCollection.forEach((photo, i) => {
+          const photoName = `photo_${i}-${signature}`;
+          collection.push(photoName);
+          const pr = writeFile(path.join(pathToPostDir, 'collection', photoName), photo.buffer);
+          promises.push(pr);
+        });
+        await Promise.all(promises);
+        post.photoCollection = collection;
+      }
       await post.save();
 
       User.findById(userId, (err, doc) => {
@@ -52,7 +60,7 @@ module.exports = {
         const options = { new: true };
         User.findByIdAndUpdate(userId, userUpdate, options, (err, doc) => {
           if (err) throw err;
-          res.status(200).send({ post });
+          res.status(200).send({ postId });
         });
       });
     } catch(err) {
