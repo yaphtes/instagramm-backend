@@ -5,15 +5,13 @@ const jwt = require('jsonwebtoken');
 const { app, db } = require('../app');
 const { User } = require('../models');
 const fileType = require('file-type');
-const config = require('../config.json');
-const { uploads, makeSignature } = require('../variables');
 const { promisify } = require('util');
-const unlink = promisify(fs.unlink);
-const mkdir = promisify(fs.mkdir);
+const config = require('../config.json');
 const writeFile = promisify(fs.writeFile);
+const mkdir = promisify(fs.mkdir);
+const unlink = promisify(fs.unlink);
+const { uploads, makeSignature } = require('../variables');
 
-
-// переписать mongoose в промисы, работать через ObjectID (?)
 
 module.exports = {
   async deleteAvatar(req, res) {
@@ -40,9 +38,8 @@ module.exports = {
   async putAvatar(req, res) {
     const { id, currentAvatar } = req.body;
     const { file: avatar } = req;
-    const signature = makeSignature();;
-    
-    
+    const signature = makeSignature();
+
     try {
       if (currentAvatar) {
         await unlink(path.join(uploads, id, currentAvatar));
@@ -74,19 +71,21 @@ module.exports = {
 
   putUser(req, res) {
     const { id, username, firstname, lastname, about, gender } = req.body;
-
-    const options = { new: true };
-    const update = {
-      username,
-      firstname,
-      lastname,
-      about,
-      gender
-    };
-
-    User.findByIdAndUpdate({ _id: id }, update, options, (err, doc) => {
+    User.findOne({ username }, (err, doc) => {
       if (err) throw err;
-      res.status(200).send(doc);
+      const options = { new: true };
+      let update = {
+        username,
+        firstname,
+        lastname,
+        about,
+        gender
+      };
+      if (doc) delete update.username;;
+      User.findByIdAndUpdate({ _id: id }, update, options, (err, doc) => {
+        if (err) throw err;
+        res.status(200).send(doc);
+      });
     });
   },
 

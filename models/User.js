@@ -15,8 +15,16 @@ const userSchema = new mongoose.Schema({
   firstname: String,
   lastname: String,
   about: String,
-  avatar: String,
-  gender: String,
+  
+  avatar: {
+    type: String,
+    default: null
+  },
+
+  gender: {
+    type: String,
+    default: 'none'
+  },
 
   posts: [ObjectId]
 });

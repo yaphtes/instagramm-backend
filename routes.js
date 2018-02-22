@@ -15,4 +15,6 @@ app.get('/api/user-by-token', users.getUserByToken);
 
 // posts
 app.post('/api/article', upload.fields([{ name: 'preview' }, { name: 'collection'}]), posts.postArticle);
-app.get('/api/post-preview', posts.getPostPreview);
+app.get('/api/post-preview', posts.getArticlePreview);
+app.get('/api/post', posts.getArticle);
+app.delete('/api/post', posts.deleteArticle);

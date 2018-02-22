@@ -8,9 +8,39 @@ const { ObjectId } = mongoose.Schema.Types;
 const { promisify } = require('util');
 const mkdir = promisify(fs.mkdir);
 const writeFile = promisify(fs.writeFile);
+const unlink = promisify(fs.unlink);
+const rimraf = require('rimraf');
 
 
 module.exports = {
+  async deleteArticle(req, res) {
+    const { postId, userId } = req.body;
+    Post.findByIdAndRemove(postId, err => {
+      if (err) throw err;
+      User.findById(userId, (err, doc) => {
+        if (err) throw err;
+        const posts = doc.posts.filter(post => post != postId);
+        const options = { new: true };
+        const update = { posts };
+        User.findByIdAndUpdate(userId, update, options, async (err, doc) => {
+          if (err) throw err;
+          rimraf(path.join(uploads, userId, 'posts', postId), err => {
+            if (err) throw err;
+            res.status(200).send();
+          });
+        });
+      });
+    });
+  },
+
+  getArticle(req, res) {
+    const { postId } = req.query;
+    Post.findById(postId, (err, doc) => {
+      if (err) throw err;
+      res.status(200).send(doc);
+    });
+  },
+
   async postArticle(req, res) {
     const previewIsLoaded = Boolean(req.files.preview);
     const collectionIsLoaded = Boolean(req.files.collection);
@@ -18,8 +48,7 @@ module.exports = {
     if (previewIsLoaded) var preview = req.files.preview[0];
     if (collectionIsLoaded) var { collection: photoCollection } = req.files;
 
-    let { id: userId, title, content, date } = req.body;
-    console.log(userId);
+    let { userId, title, content, date } = req.body;
     date = new Date(Number(date));    
 
     let post = new Post({
@@ -69,7 +98,7 @@ module.exports = {
     }
   },
 
-  getPostPreview(req, res) {
+  getArticlePreview(req, res) {
     const { postId } = req.query;
     Post.findById(postId, (err, doc) => {
       if (err) throw err;
