@@ -3,7 +3,7 @@ const path = require('path');
 const stream = require('stream');
 const jwt = require('jsonwebtoken');
 const { app, db } = require('../app');
-const { User } = require('../models');
+const { User, Post } = require('../models');
 const fileType = require('file-type');
 const { promisify } = require('util');
 const config = require('../config.json');
@@ -11,9 +11,56 @@ const writeFile = promisify(fs.writeFile);
 const mkdir = promisify(fs.mkdir);
 const unlink = promisify(fs.unlink);
 const { uploads, makeSignature } = require('../variables');
+const rimraf = require('rimraf');
 
 
 module.exports = {
+  outerUserById(req, res) {
+    const { id } = req.query;
+    User.findById(id, (err, doc) => {
+      if (err) throw err;
+      res.status(200).send(doc);
+    });
+  },
+
+  getUsersByFragment(req, res) {
+    const { fragment } = req.query;
+    User.find({ username: {$regex: new RegExp(`.*${fragment}.*`)} }, (err, docs) => {
+      if (err) throw err;
+      res.send(docs);
+    })
+  },
+
+  deleteUser(req, res) {
+    const { id } = req.body;
+    // todo нужно учесть чтобы token и userId были одной сущности
+    // реализуем после фикса jwt
+
+    User.findById(id, async (err, doc) => {
+      if (err) throw err;
+      const { posts } = doc;
+      let promises = [];
+      posts.forEach(postId => {
+        const pr = new Promise((resolve, reject) => {
+          Post.findByIdAndRemove(postId, err => {
+            if (err) throw err;
+            resolve();
+          });
+        });
+        promises.push(pr);
+      });
+
+      await Promise.all(promises);
+      User.findByIdAndRemove(id, err => {
+        if (err) throw err;
+        rimraf(path.join(uploads, id), err => {
+          if (err) throw err;
+          res.status(200).send();
+        });
+      });
+    });
+  },
+
   async deleteAvatar(req, res) {
     const { id, currentAvatar } = req.body;
 
