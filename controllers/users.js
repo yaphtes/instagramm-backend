@@ -15,6 +15,59 @@ const rimraf = require('rimraf');
 
 
 module.exports = {
+  removeSubscription(req, res) {
+    const { myId, subscriptionId } = req.body;
+    User.findById(myId, (err, doc) => {
+      if (err) throw err;
+      const update = { mySubscriptions: doc.mySubscriptions.filter(id => id.toString() !== subscriptionId) };
+      User.findByIdAndUpdate(myId, update, (err, doc) => {
+        if (err) throw err;
+        User.findById(subscriptionId, (err, doc) => {
+          if (err) throw err;
+          const update = { subscribers: doc.subscribers.filter(id => id.toString() !== myId) };
+          User.findByIdAndUpdate(subscriptionId, update, (err, doc) => {
+            if (err) throw err;
+            res.status(200).send();
+          });
+        });
+      });
+    });
+  },
+
+  getUserFragmentById(req, res) {
+    const { id } = req.query;
+    User.findById(id, (err, { username, avatar, firstname, lastname }) => {
+      if (err) throw err;
+      const data = {
+        id,
+        username,
+        avatar,
+        firstname,
+        lastname
+      };
+      res.status(200).send(data);
+    });
+  },
+
+  addSubscription(req, res) {
+    const { myId, subscriptionId } = req.body;
+    User.findById(myId, (err, doc) => {
+      if (err) throw err;
+      const update = { mySubscriptions: [...doc.mySubscriptions, subscriptionId] };
+      User.findByIdAndUpdate(myId, update, (err, doc) => {
+        if (err) throw err;
+        User.findById(subscriptionId, (err, doc) => {
+          if (err) throw err;
+          const update = { subscribers: [...doc.subscribers, myId] };
+          User.findByIdAndUpdate(subscriptionId, update, (err, doc) => {
+            if (err) throw err;
+            res.status(200).send();
+          });
+        });
+      });
+    });
+  },
+
   outerUserById(req, res) {
     const { id } = req.query;
     User.findById(id, (err, doc) => {

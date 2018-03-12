@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
   hash: { type: String, required: true },
   avatar: { type: String, default: '' },
   mySubscriptions: [ObjectId],
-  subscribes: [ObjectId],
+  subscribers: [ObjectId],
   firstname: String,
   posts: [ObjectId],
   lastname: String,

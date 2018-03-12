@@ -15,6 +15,9 @@ app.put('/api/avatar', upload.single('avatar'), users.putAvatar);
 app.delete('/api/avatar', users.deleteAvatar);
 app.get('/api/user-by-token', users.getUserByToken);
 app.delete('/api/user', users.deleteUser);
+app.post('/api/add-subscription', users.addSubscription);
+app.get('/api/user-fragment-by-id', users.getUserFragmentById);
+app.delete('/api/remove-subscription', users.removeSubscription);
 
 // posts
 app.post('/api/article', upload.fields([{ name: 'preview' }, { name: 'collection' }]), posts.postArticle);
