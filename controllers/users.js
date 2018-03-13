@@ -17,17 +17,25 @@ const rimraf = require('rimraf');
 module.exports = {
   removeSubscription(req, res) {
     const { myId, subscriptionId } = req.body;
-    User.findById(myId, (err, doc) => {
+    User.findById(myId, (err, me) => {
       if (err) throw err;
-      const update = { mySubscriptions: doc.mySubscriptions.filter(id => id.toString() !== subscriptionId) };
-      User.findByIdAndUpdate(myId, update, (err, doc) => {
+      const update = { mySubscriptions: me.mySubscriptions.filter(obj => obj._id.toString() !== subscriptionId) };
+      User.findByIdAndUpdate(myId, update, err => {
         if (err) throw err;
-        User.findById(subscriptionId, (err, doc) => {
+        User.findById(subscriptionId, (err, sub) => {
           if (err) throw err;
-          const update = { subscribers: doc.subscribers.filter(id => id.toString() !== myId) };
+          const update = { subscribers: sub.subscribers.filter(obj => obj._id.toString() !== myId) };
           User.findByIdAndUpdate(subscriptionId, update, (err, doc) => {
             if (err) throw err;
-            res.status(200).send();
+            const removedSub = {
+              _id: sub._id,
+              username: sub.username,
+              firstname: sub.firstname,
+              lastname: sub.lastname,
+              avatar: sub.avatar
+            };
+
+            res.status(200).send(removedSub);
           });
         });
       });
@@ -51,17 +59,41 @@ module.exports = {
 
   addSubscription(req, res) {
     const { myId, subscriptionId } = req.body;
-    User.findById(myId, (err, doc) => {
+    User.findById(myId, (err, me) => {
       if (err) throw err;
-      const update = { mySubscriptions: [...doc.mySubscriptions, subscriptionId] };
-      User.findByIdAndUpdate(myId, update, (err, doc) => {
+      User.findById(subscriptionId, (err, sub) => {
         if (err) throw err;
-        User.findById(subscriptionId, (err, doc) => {
+        const addingSub = {
+          _id: sub._id,
+          username: sub.username,
+          firstname: sub.firstname,
+          lastname: sub.lastname,
+          avatar: sub.avatar
+        };
+
+        const update = {
+          mySubscriptions: [ ...me.mySubscriptions, addingSub ]
+        };
+        User.findByIdAndUpdate(myId, update, (err, me) => {
           if (err) throw err;
-          const update = { subscribers: [...doc.subscribers, myId] };
-          User.findByIdAndUpdate(subscriptionId, update, (err, doc) => {
+          User.findById(subscriptionId, (err, doc) => {
             if (err) throw err;
-            res.status(200).send();
+            const update = {
+              subscribers: [
+                ...doc.subscribers,
+                {
+                  _id: me._id,
+                  username: me.username,
+                  firstname: me.firstname,
+                  lastname: me.lastname,
+                  avatar: me.avatar
+                }
+              ]
+            };
+            User.findByIdAndUpdate(subscriptionId, update, (err, doc) => {
+              if (err) throw err;
+              res.status(200).send(addingSub);
+            });
           });
         });
       });
