@@ -4,7 +4,6 @@ const { app, db } = require('../app');
 const { User, Post } = require('../models');
 const { uploads, makeSignature } = require('../variables');
 const mongoose = require('mongoose');
-const { ObjectId } = mongoose.Schema.Types;
 const { promisify } = require('util');
 const mkdir = promisify(fs.mkdir);
 const writeFile = promisify(fs.writeFile);
@@ -47,10 +46,10 @@ module.exports = {
 
     if (previewIsLoaded) var preview = req.files.preview[0];
     if (collectionIsLoaded) var { collection: photoCollection } = req.files;
-
+    
     let { userId, title, content, date } = req.body;
     date = new Date(Number(date));    
-
+  
     let post = new Post({
       userId,
       date,

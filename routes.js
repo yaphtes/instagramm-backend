@@ -1,7 +1,7 @@
 const { app } = require('./app');
 const multer = require('multer');
 const upload = multer();
-const { users, posts } = require('./controllers');
+const { users, posts, stuffs } = require('./controllers');
 
 // app.use(users.jwtCheck);
 
@@ -24,3 +24,6 @@ app.post('/api/article', upload.fields([{ name: 'preview' }, { name: 'collection
 app.get('/api/post-preview', posts.getArticlePreview);
 app.get('/api/post', posts.getArticle);
 app.delete('/api/post', posts.deleteArticle);
+
+// stuffs
+app.get('/api/user-avatar-by-post-id', stuffs.getUserAvatarByPostId);
