@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
     private: Boolean
   }],
   firstname: String,
-  posts: [ObjectId],
+  posts: [{ _id: ObjectId, date: Date }],
   lastname: String,
   about: String,
   private: { type: Boolean, default: false}

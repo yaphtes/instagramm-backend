@@ -18,7 +18,7 @@ module.exports = {
       if (err) throw err;
       User.findById(userId, (err, doc) => {
         if (err) throw err;
-        const posts = doc.posts.filter(post => post != postId);
+        const posts = doc.posts.filter(({ _id }) => _id.toString() !== postId);
         const options = { new: true };
         const update = { posts };
         User.findByIdAndUpdate(userId, update, options, async (err, doc) => {
@@ -47,8 +47,8 @@ module.exports = {
     if (previewIsLoaded) var preview = req.files.preview[0];
     if (collectionIsLoaded) var { collection: photoCollection } = req.files;
     
-    let { userId, title, content, date } = req.body;
-    date = new Date(Number(date));    
+    const { userId, title, content, date: ms } = req.body;
+    const date = new Date(Number(ms));    
   
     let post = new Post({
       userId,
@@ -84,11 +84,12 @@ module.exports = {
 
       User.findById(userId, (err, doc) => {
         if (err) throw err;
-        const userUpdate = { posts: [...doc.posts, postId] };
+        const sendingPost = { _id: post.id, date };
+        const userUpdate = { posts: [...doc.posts, sendingPost] };
         const options = { new: true };
         User.findByIdAndUpdate(userId, userUpdate, options, (err, doc) => {
           if (err) throw err;
-          res.status(200).send({ postId });
+          res.status(200).send(sendingPost);
         });
       });
     } catch(err) {
@@ -101,8 +102,9 @@ module.exports = {
     const { postId } = req.query;
     Post.findById(postId, (err, doc) => {
       if (err) throw err;
-      const { preview, title, content, date } = doc;
+      const { preview, title, content, date, userId } = doc;
       const postPreview = {
+        userId,
         preview,
         title,
         content,

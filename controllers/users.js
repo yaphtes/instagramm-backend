@@ -125,7 +125,7 @@ module.exports = {
       if (err) throw err;
       const { posts } = doc;
       let promises = [];
-      posts.forEach(postId => {
+      posts.forEach(({ postId }) => {
         const pr = new Promise((resolve, reject) => {
           Post.findByIdAndRemove(postId, err => {
             if (err) throw err;
