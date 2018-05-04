@@ -4,6 +4,8 @@ const stream = require('stream');
 const jwt = require('jsonwebtoken');
 const { app, db } = require('../app');
 const { User, Post } = require('../models');
+const mongoose = require('mongoose');
+const { ObjectId } = mongoose.Schema.Types;
 const fileType = require('file-type');
 const { promisify } = require('util');
 const config = require('../config.json');
@@ -12,9 +14,12 @@ const mkdir = promisify(fs.mkdir);
 const unlink = promisify(fs.unlink);
 const { uploads, makeSignature } = require('../variables');
 const rimraf = require('rimraf');
+const WebSocket = require('ws');
+const util = require('util');
 
 
 module.exports = {
+  // также реализовать обновление документов
   removeSubscription(req, res) {
     const { myId, subscriptionId } = req.body;
     User.findById(myId, (err, me) => {
@@ -57,10 +62,19 @@ module.exports = {
     });
   },
 
+  // также реализовать обновление документов
   addSubscription(req, res) {
     const { myId, subscriptionId } = req.body;
     User.findById(myId, (err, me) => {
       if (err) throw err;
+
+      for (const sub of me.mySubscriptions) {
+        if (sub._id == subscriptionId) {
+          return res.status(409).send();
+        }
+      }
+
+
       User.findById(subscriptionId, (err, sub) => {
         if (err) throw err;
         const addingSub = {
@@ -69,29 +83,26 @@ module.exports = {
           firstname: sub.firstname,
           lastname: sub.lastname,
           avatar: sub.avatar
-        };
+        };        
 
         const update = {
-          mySubscriptions: [ ...me.mySubscriptions, addingSub ]
-        };
-        User.findByIdAndUpdate(myId, update, (err, me) => {
+          mySubscriptions: [ ...me.mySubscriptions, addingSub ] };
+
+        User.findByIdAndUpdate(myId, update, { new: true }, (err, me) => {
           if (err) throw err;
           User.findById(subscriptionId, (err, doc) => {
             if (err) throw err;
-            const update = {
-              subscribers: [
-                ...doc.subscribers,
-                {
-                  _id: me._id,
-                  username: me.username,
-                  firstname: me.firstname,
-                  lastname: me.lastname,
-                  avatar: me.avatar
-                }
-              ]
+            const meData = {
+              _id: me._id,
+              username: me.username,
+              firstname: me.firstname,
+              lastname: me.lastname,
+              avatar: me.avatar
             };
+            const update = { subscribers: [ ...doc.subscribers, meData ] };
             User.findByIdAndUpdate(subscriptionId, update, (err, doc) => {
               if (err) throw err;
+
               res.status(200).send(addingSub);
             });
           });
@@ -116,6 +127,7 @@ module.exports = {
     })
   },
 
+  // также реализовать обновление документов
   deleteUser(req, res) {
     const { id } = req.body;
     // todo нужно учесть чтобы token и userId были одной сущности
@@ -149,21 +161,18 @@ module.exports = {
   async deleteAvatar(req, res) {
     const { id, currentAvatar } = req.body;
 
-    if (currentAvatar) {
-      try {
-        await unlink(path.join(uploads, id, currentAvatar));
-        const options = { new: true };
-        const update = { avatar: "" };
+    try {
+      if (currentAvatar) await unlink(path.join(uploads, id, currentAvatar));
+      const options = { new: true };
+      const update = { avatar: "" };
 
-        User.findByIdAndUpdate(id, update, options, (err, doc) => {
-          if (err) throw err;
-          res.status(200).send();
-        });
-      } catch(err) {
-        console.log(err);
-      }
-    } else {
-      res.status(200).send();
+      User.findByIdAndUpdate(id, update, options, async (err, me) => {
+        if (err) throw err;
+        await me.updateSubs();
+        res.status(200).send();
+      });
+    } catch(err) {
+      console.log(err);
     }
   },
 
@@ -173,37 +182,24 @@ module.exports = {
     const signature = makeSignature();
 
     try {
-      if (currentAvatar) {
-        await unlink(path.join(uploads, id, currentAvatar));
-        const avatar = await write();
-        res.status(200).send({ avatar });
-      } else {
-        const avatar = await write();
-        res.status(200).send({ avatar });
-      }
-    } catch(err) {
-      console.log(err);
-    }
-
-    function write() {
-      return new Promise(async (resolve, reject) => {
-        const name = `avatar-${signature}`;
-        await writeFile(path.join(uploads, id, name), avatar.buffer);
-        const update = { avatar: name };
-        User.findByIdAndUpdate(id, update, (err, doc) => {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(name);
-          }
-        });
+      if (currentAvatar) await unlink(path.join(uploads, id, currentAvatar));
+      const name = `avatar-${signature}`;
+      await writeFile(path.join(uploads, id, name), avatar.buffer);
+      const update = { avatar: name };
+      const options = { new: true };
+      User.findByIdAndUpdate(id, update, options, async (err, me) => {
+        if (err) throw err;
+        await me.updateSubs();
+        res.status(200).send({ avatar: name });
       });
+    } catch (err) {
+      console.log(err);
     }
   },
 
   putUser(req, res) {
     const { id, username, firstname, lastname, about, gender } = req.body;
-    User.findOne({ username }, (err, doc) => {
+    User.findOne({ username }, (err, me) => {
       if (err) throw err;
       const options = { new: true };
       let update = {
@@ -213,10 +209,18 @@ module.exports = {
         about,
         gender
       };
-      if (doc) delete update.username;;
-      User.findByIdAndUpdate({ _id: id }, update, options, (err, doc) => {
+      if (me) delete update.username;;
+      User.findByIdAndUpdate(id, update, options, async (err, me) => {
         if (err) throw err;
-        res.status(200).send(doc);
+        const data = {
+          _id: id,
+          username,
+          firstname,
+          lastname,
+          avatar: me.avatar || ''
+        };
+        me = await me.updateSubs(data);
+        res.status(200).send(me);
       });
     });
   },

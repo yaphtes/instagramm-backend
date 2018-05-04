@@ -9,9 +9,37 @@ const mkdir = promisify(fs.mkdir);
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 const rimraf = require('rimraf');
+const { ObjectId } = mongoose.Schema.Types;
 
 
 module.exports = {
+  putLikes(req, res) {
+    const { postId, myId } = req.body;
+    Post.findById(postId, (err, post) => {
+      if (err) throw err;
+      const postLikes = post.likes.map(like => like.toString());
+      if (postLikes.includes(myId)) {
+        const postUpdate = { likes: post.likes.filter(userIdLike => userIdLike.toString() !== myId) };
+        Post.findByIdAndUpdate(postId, postUpdate, { new: true }, (err, post) => {
+          if (err) throw err;
+          res.status(200).send({
+            type: 'removed',
+            likes: post.likes
+          });
+        });
+      } else {
+        const postUpdate = { likes: [...post.likes, myId] };
+        Post.findByIdAndUpdate(postId, postUpdate, { new: true }, (err, post) => {
+          if (err) throw err;
+          res.status(200).send({
+            type: 'added',
+            likes: post.likes
+          });
+        });
+      }
+    });
+  },
+
   async deleteArticle(req, res) {
     const { postId, userId } = req.body;
     Post.findByIdAndRemove(postId, err => {
@@ -84,7 +112,7 @@ module.exports = {
 
       User.findById(userId, (err, doc) => {
         if (err) throw err;
-        const sendingPost = { _id: post.id, date };
+        const sendingPost = { _id: post.id, date, title, content, userId, preview: post.preview };
         const userUpdate = { posts: [...doc.posts, sendingPost] };
         const options = { new: true };
         User.findByIdAndUpdate(userId, userUpdate, options, (err, doc) => {
@@ -98,20 +126,11 @@ module.exports = {
     }
   },
 
-  getArticlePreview(req, res) {
+  getPostInfoById(req, res) {
     const { postId } = req.query;
     Post.findById(postId, (err, doc) => {
       if (err) throw err;
-      const { preview, title, content, date, userId } = doc;
-      const postPreview = {
-        userId,
-        preview,
-        title,
-        content,
-        date
-      };
-      
-      res.status(200).send(postPreview);
+      res.status(200).send({ likes: doc.likes });
     });
   }
 };

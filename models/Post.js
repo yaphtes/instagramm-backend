@@ -9,7 +9,7 @@ const postSchema = new mongoose.Schema({
   date: Date,
   title: String,
   content: String,
-  preview: String,
+  preview: { type: String, default: '' },
   photoCollection: [String],
   likes: [ObjectId],
   comments: [{ userId: ObjectId, comment: String }]
