@@ -13,6 +13,39 @@ const { ObjectId } = mongoose.Schema.Types;
 
 
 module.exports = {
+  postComment(req, res) {
+    const {
+      comment,
+      avatar,
+      userId,
+      postId,
+      username
+    } = req.body;
+
+    const item = { comment, avatar, userId, username };
+
+    Post.findById(postId, (err, post) => {
+      if (err) throw err;
+
+      let comments = [...post.comments];
+      comments.push(item);
+      const update = { comments };
+
+      Post.findByIdAndUpdate(postId, update, (err, post) => {
+        if (err) throw err;
+        res.status(200).send(item);
+      });
+    });
+  },
+
+  getCommentsByPostId(req, res) {
+    const { postId } = req.query;
+    Post.findById(postId, (err, post) => {
+      if (err) throw err;
+      res.status(200).send(post.comments);
+    });
+  },
+
   putLikes(req, res) {
     const { postId, myId } = req.body;
     Post.findById(postId, (err, post) => {
@@ -130,7 +163,7 @@ module.exports = {
     const { postId } = req.query;
     Post.findById(postId, (err, doc) => {
       if (err) throw err;
-      res.status(200).send({ likes: doc.likes });
+      res.status(200).send({ likes: doc.likes, commentsCount: doc.comments ? doc.comments.length : 0 });
     });
   }
 };

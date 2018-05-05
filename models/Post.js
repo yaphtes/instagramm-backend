@@ -10,9 +10,15 @@ const postSchema = new mongoose.Schema({
   title: String,
   content: String,
   preview: { type: String, default: '' },
-  photoCollection: [String],
-  likes: [ObjectId],
-  comments: [{ userId: ObjectId, comment: String }]
+  photoCollection: [ String ],
+  likes: [ ObjectId ],
+  comments: [{
+    _id: ObjectId,
+    userId: ObjectId,
+    comment: String,
+    avatar: String,
+    username: String
+  }]
 });
 
 module.exports = mongoose.model('Post', postSchema);

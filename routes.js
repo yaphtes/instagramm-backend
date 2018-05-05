@@ -30,6 +30,8 @@ app.get('/api/user-fragment-by-id', users.getUserFragmentById);
 app.delete('/api/remove-subscription', users.removeSubscription);
 
 // posts
+app.post('/api/comment', posts.postComment);
+app.get('/api/post-comments-by-post-id', posts.getCommentsByPostId);
 app.post('/api/article', upload.fields([{ name: 'preview' }, { name: 'collection' }]), posts.postArticle);
 app.get('/api/post-info-by-id', posts.getPostInfoById);
 app.get('/api/post', posts.getArticle);
