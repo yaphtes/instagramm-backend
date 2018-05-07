@@ -68,4 +68,41 @@ userSchema.methods.updateSubs = function(puttingData) {
   });
 };
 
+// оптимизировать, если будут пользоваться много людей
+userSchema.methods.updateCommentsItems = function({ avatar, username }) {
+  const myId = this._id.toString();
+  let promises = [];
+  return new Promise(resolve => {
+    this.model('Post').find({}, (err, posts) => {
+      if (err) throw err;
+  
+      posts.forEach(post => {
+        const pr = new Promise(resolve => {
+          const comments = post.comments;
+          const postId = post._id.toString();
+          if (comments.find(comment => comment.userId.toString() === myId)) {
+            const update = {
+              comments: comments.map(comment => {
+                if (avatar || avatar === '') comment.avatar = avatar;
+                if (username) comment.username = username;
+                return comment;
+              })
+            };
+  
+            this.model('Post').findByIdAndUpdate(postId, update, err => {
+              if (err) throw err;
+              resolve();
+            });
+          } else {
+            resolve();
+          }
+        });
+        promises.push(pr);
+      });
+    });
+
+    Promise.all(promises).then(() => resolve());
+  });
+};
+
 module.exports = mongoose.model('User', userSchema);

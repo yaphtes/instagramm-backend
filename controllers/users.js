@@ -169,6 +169,7 @@ module.exports = {
       User.findByIdAndUpdate(id, update, options, async (err, me) => {
         if (err) throw err;
         await me.updateSubs();
+        await me.updateCommentsItems({ avatar: '' })
         res.status(200).send();
       });
     } catch(err) {
@@ -190,6 +191,7 @@ module.exports = {
       User.findByIdAndUpdate(id, update, options, async (err, me) => {
         if (err) throw err;
         await me.updateSubs();
+        await me.updateCommentsItems({ avatar: name });
         res.status(200).send({ avatar: name });
       });
     } catch (err) {
@@ -199,7 +201,7 @@ module.exports = {
 
   putUser(req, res) {
     const { id, username, firstname, lastname, about, gender } = req.body;
-    User.findOne({ username }, (err, me) => {
+    User.findOne({ username }, (err, me1) => {
       if (err) throw err;
       const options = { new: true };
       let update = {
@@ -209,7 +211,7 @@ module.exports = {
         about,
         gender
       };
-      if (me) delete update.username;;
+      if (me1) delete update.username;;
       User.findByIdAndUpdate(id, update, options, async (err, me) => {
         if (err) throw err;
         const data = {
@@ -220,6 +222,7 @@ module.exports = {
           avatar: me.avatar || ''
         };
         me = await me.updateSubs(data);
+        if (!me1) me.updateCommentsItems({ username });
         res.status(200).send(me);
       });
     });
