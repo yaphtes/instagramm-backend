@@ -2,18 +2,9 @@ const { app } = require('./app');
 const multer = require('multer');
 const upload = multer();
 const { users, posts, stuffs } = require('./controllers');
-// const { URLSearchParams } = require('url');
 
-// app.get('wss').on('connection', (ws, req) => {
-//   const params = new URLSearchParams(req.url.slice(2));
-//   const uid = params.get('uid');
-//   ws.on('message', ({ data }) => {
-
-//   })
-// });
-
-
-// app.use(users.jwtCheck);
+// jwt
+app.use(users.jwtCheck);
 
 // users
 app.get('/api/outer-user-by-id', users.outerUserById);
@@ -37,6 +28,7 @@ app.get('/api/post-info-by-id', posts.getPostInfoById);
 app.get('/api/post', posts.getArticle);
 app.delete('/api/post', posts.deleteArticle);
 app.put('/api/likes', posts.putLikes);
+app.delete('/api/comment', posts.deleteComment);
 
 // stuffs
 app.get('/api/user-avatar-by-post-id', stuffs.getUserAvatarByPostId);

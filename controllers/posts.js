@@ -9,10 +9,24 @@ const mkdir = promisify(fs.mkdir);
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 const rimraf = require('rimraf');
-const { ObjectId } = mongoose.Schema.Types;
+const { ObjectId } = mongoose.Types;
 
 
 module.exports = {
+  deleteComment(req, res) {
+    const { commentId, postId } = req.body;
+    Post.findById(postId, (err, post) => {
+      if (err) throw err;
+      const oldComments = post.comments;
+      const newComments = oldComments.filter(oldComment => oldComment._id.toString() !== commentId);
+      const update = { comments: newComments };
+      Post.findByIdAndUpdate(postId, update, (err, post) => {
+        if (err) throw err;
+        res.status(200).send();
+      });
+    });
+  },
+
   postComment(req, res) {
     const {
       comment,
@@ -22,7 +36,13 @@ module.exports = {
       username
     } = req.body;
 
-    const item = { comment, avatar, userId, username };
+    const item = {
+      comment,
+      avatar,
+      userId,
+      username,
+      _id: new ObjectId()
+    };
 
     Post.findById(postId, (err, post) => {
       if (err) throw err;

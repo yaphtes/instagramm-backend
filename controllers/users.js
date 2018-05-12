@@ -234,10 +234,10 @@ module.exports = {
       if (err) throw err;
       if (doc) return res.status(422).send('User already exists');
       let user = new User({ username });
-      let id = String(user._id);
-      await mkdir(path.join(uploads, id));
-      await mkdir(path.join(uploads, id, 'posts'));
-      user.hash = jwt.sign({ password }, id, { expiresIn: config.jwt.expiresIn });
+      const userId = user._id.toString();
+      await mkdir(path.join(uploads, userId));
+      await mkdir(path.join(uploads, userId, 'posts'));
+      user.hash = jwt.sign({ password }, userId, { expiresIn: config.jwt.expiresIn });
       user.save((err, user) => {
         if (err) throw err;
         res.status(200).send(user);
@@ -248,20 +248,20 @@ module.exports = {
   getUser(req, res) {
     const { username, password } = req.query;
 
-    User.findOne({ username }, (err, doc) => {
+    User.findOne({ username }, (err, user) => {
       if (err) throw err;
-      if (!doc) return res.status(404).send();
-      let { _id: id, hash } = doc;
+      if (!user) return res.status(404).send();
+      const userId = user._id.toString();
+      const hash = user.hash;
       const { password: decodedPassword } = jwt.decode(hash);
       
       if (decodedPassword !== password) {
         res.status(404).send();
       } else {
-        id = String(id);
-        const newHash = jwt.sign({ password }, id, { expiresIn: config.jwt.expiresIn });
+        const newHash = jwt.sign({ password }, userId, { expiresIn: config.jwt.expiresIn });
         const update = { hash: newHash };
         const options = { new: true };
-        User.findByIdAndUpdate(id, update, options, (err, doc) => {
+        User.findByIdAndUpdate(userId, update, options, (err, doc) => {
           if (err) throw err;
           res.status(200).send(doc);
         });
@@ -280,16 +280,14 @@ module.exports = {
   jwtCheck(req, res, next) {
     const { method, originalUrl } = req;
 
-    // if login or registation
     if (originalUrl.includes('/api/user') && method === 'GET' || method === 'POST') {
       next();
     } else {
       const hash = req.headers['x-jwt'];
-      console.log(req.headers);
-      User.findOne({ hash }, (err, doc) => {
+      User.findOne({ hash }, (err, user) => {
         if (err) throw err;
-        const id = String(doc._id);
-        jwt.verify(hash, id, (err, decoded) => {
+        const userId = user._id.toString();
+        jwt.verify(hash, userId, (err, decoded) => {
           if (err) {
             return res.status(401).redirect('/login');
           } else {
