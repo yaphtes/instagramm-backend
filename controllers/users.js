@@ -19,7 +19,6 @@ const util = require('util');
 
 
 module.exports = {
-  // также реализовать обновление документов
   removeSubscription(req, res) {
     const { myId, subscriptionId } = req.body;
     User.findById(myId, (err, me) => {
@@ -62,7 +61,6 @@ module.exports = {
     });
   },
 
-  // также реализовать обновление документов
   addSubscription(req, res) {
     const { myId, subscriptionId } = req.body;
     User.findById(myId, (err, me) => {
@@ -127,35 +125,60 @@ module.exports = {
     })
   },
 
-  // также реализовать обновление документов
   deleteUser(req, res) {
-    const { id } = req.body;
-    // todo нужно учесть чтобы token и userId были одной сущности
-    // реализуем после фикса jwt
+    const { id: myId } = req.body;
 
-    User.findById(id, async (err, doc) => {
-      if (err) throw err;
-      const { posts } = doc;
-      let promises = [];
-      posts.forEach(({ postId }) => {
-        const pr = new Promise((resolve, reject) => {
+    User.findById(myId, async (err, me) => {
+      const promises0 = [];
+      const posts = me.posts;
+      posts.forEach(post => {
+        const pr = new Promise(resolve => {
+          const postId = post._id.toString();
           Post.findByIdAndRemove(postId, err => {
             if (err) throw err;
             resolve();
           });
         });
+        promises0.push(pr);
+      });
+      await Promise.all(promises0);
+
+
+      let promises = [];
+      me.mySubscriptions.forEach(mySubscription => {
+        const subscriptionId = mySubscription._id.toString();
+        const pr = new Promise(resolve => {
+          User.findById(subscriptionId, (err, subscription) => {
+            if (err) throw err;
+            const update = {
+              subscribers: subscription.subscribers.filter(subscriber => {
+                return subscriber._id.toString() !== myId;
+              }),
+  
+              mySubscriptions: subscription.mySubscriptions.filter(subscription => {
+                return subscription._id.toString() !== myId;
+              })
+            };
+            
+            User.findByIdAndUpdate(subscriptionId, update, err => {
+              if (err) throw err;
+              resolve();
+            });
+          });
+        });
         promises.push(pr);
       });
-
       await Promise.all(promises);
-      User.findByIdAndRemove(id, err => {
+  
+
+      User.findByIdAndRemove(myId, err => {
         if (err) throw err;
-        rimraf(path.join(uploads, id), err => {
+        rimraf(path.join(uploads, myId), err => {
           if (err) throw err;
           res.status(200).send();
         });
       });
-    });
+    });      
   },
 
   async deleteAvatar(req, res) {
@@ -211,7 +234,7 @@ module.exports = {
         about,
         gender
       };
-      if (me1) delete update.username;;
+      if (me1) delete update.username;
       User.findByIdAndUpdate(id, update, options, async (err, me) => {
         if (err) throw err;
         const data = {
