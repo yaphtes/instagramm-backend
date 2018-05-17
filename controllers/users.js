@@ -309,6 +309,7 @@ module.exports = {
       const hash = req.headers['x-jwt'];
       User.findOne({ hash }, (err, user) => {
         if (err) throw err;
+        if (!user) return res.status(401).redirect('/login');
         const userId = user._id.toString();
         jwt.verify(hash, userId, (err, decoded) => {
           if (err) {

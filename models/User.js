@@ -68,7 +68,6 @@ userSchema.methods.updateSubs = function(puttingData) {
   });
 };
 
-// оптимизировать, если будут пользоваться много людей
 userSchema.methods.updateCommentsItems = function({ avatar, username }) {
   const myId = this._id.toString();
   let promises = [];
@@ -80,11 +79,14 @@ userSchema.methods.updateCommentsItems = function({ avatar, username }) {
         const pr = new Promise(resolve => {
           const comments = post.comments;
           const postId = post._id.toString();
-          if (comments.find(comment => comment.userId.toString() === myId)) {
+          const hasMyComments = comments.find(comment => comment.userId.toString() === myId);
+          if (hasMyComments) {
             const update = {
               comments: comments.map(comment => {
-                if (avatar || avatar === '') comment.avatar = avatar;
-                if (username) comment.username = username;
+                if (comment.userId.toString() === myId) {
+                  if (avatar || avatar === '') comment.avatar = avatar;
+                  if (username) comment.username = username;
+                }
                 return comment;
               })
             };
